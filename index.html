@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Ava - a virtual assistant from Clarion Technologies</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary-color: #ff9700;
+      --bg-color: #f2f2f2;
+      --user-bg: #00b7ff;
+      --bot-bg: #e9f3ff;
+      --text-color: #333;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      margin: 0;
+      background: var(--bg-color);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      color: var(--text-color);
+    }
+
+    .chatbot-header {
+      background: linear-gradient(90deg, hsla(45, 25%, 97%, .46), hsla(0, 0%, 96%, .9));
+      color: #333;
+      height: 70px;
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    }
+
+    .chatbot-header .logo {
+      position: absolute;
+      left: 20px;
+      height: 35px;
+    }
+
+    .chat-body {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+      background: #fff;
+      scroll-behavior: smooth;
+    }
+
+    .chat-message {
+      max-width: 45%;
+      padding: 14px 18px;
+      margin: 10px 0;
+      border-radius: 20px;
+      word-wrap: break-word;
+      clear: both;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    .bot-message {
+      background: #c2e9fb;
+      color: #003b64;
+      float: left;
+    }
+
+    .user-message {
+      background-color: #e9e9e9;
+      color: black;
+      float: right;
+    }
+
+    .chat-footer {
+      display: flex;
+      padding: 14px 18px;
+      border-top: 1px solid #ddd;
+      background: rgba(255, 255, 255, 0.75);
+      backdrop-filter: blur(10px);
+      align-items: center;
+      gap: 12px;
+    }
+
+    .input-wrapper { flex: 1; }
+
+    .chat-footer textarea {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1px solid #ccc;
+      border-radius: 14px;
+      resize: none;
+      min-height: 44px;
+      font-size: 15px;
+    }
+
+    .chat-footer textarea:focus {
+      outline: none;
+      border-color:#ff9700;
+    }
+
+    .send-button {
+      background-color: #999999;
+      color: black;
+      border: none;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      font-size: 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .send-button:disabled {
+      opacity: 0.85;
+      cursor: not-allowed;
+    }
+
+    .loader {
+      display: flex;
+      align-items: center;
+      margin-top: 10px;
+      float: left;
+      clear: both;
+      padding: 10px 16px;
+      background-color: var(--bot-bg);
+      border-radius: 15px;
+    }
+
+    .loader span {
+      font-size: 14px;
+      font-style: italic;
+      color: #003b64;
+      margin-right: 10px;
+    }
+
+    .loader .dots span {
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      margin-right: 4px;
+      background-color: #003b64;
+      border-radius: 50%;
+      animation: zigzag 1s infinite;
+    }
+
+    .loader .dots span:nth-child(2) { animation-delay: 0.2s; }
+    .loader .dots span:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes zigzag {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-6px); }
+    }
+  </style>
+</head>
+<body>
+  <div class="chatbot-header" id="chat-header">
+    <img src="clarion_logo_bg.svg" alt="Clarion Logo" class="logo" />
+  </div>
+
+  <div class="chat-body" id="chat-body"></div>
+  <div class="chat-footer">
+    <div class="input-wrapper">
+      <textarea id="chat-input" placeholder="Type your response..." onkeypress="handleKeyPress(event)"></textarea>
+    </div>
+    <button onclick="sendMessage()" id="send-btn" class="send-button" title="Send">➤</button>
+  </div>
+
+  <script>
+
+const BASE_URL = "https://crmagent_staging.clariontechnologies.co.in:8524";
+
+
+    let isTyping = false;
+
+    window.onload = async () => {
+      await initializeChat();
+      await streamChatMessage("", true);
+    };
+
+    // async function initializeChat() {
+    //   try {
+    //     const clientId = urlParams.get('client_id');
+    //     const clientName = urlParams.get('client_name');
+    //     // const response = await fetch("http://127.0.0.1:8000/start_chat?client_id=1&client_name=mark");
+    //     const response = await fetch(`${BASE_URL}/start_chat?client_id=1&client_name=mark`);
+        
+
+    //     if (!response.ok) throw new Error("Failed to initialize chat");
+    //     const result = await response.json();
+    //     localStorage.setItem("customerData", JSON.stringify(result.data));
+    //     localStorage.setItem("sessionId", result.session_id);
+    //   } catch (error) {
+    //     console.error("Error initializing chat:", error);
+    //   }
+    // }
+
+
+    async function initializeChat() {
+  try {
+    // Parse query parameters from the current URL
+    const params = new URLSearchParams(window.location.search);
+    const client_id = params.get("client_id");
+    const client_name = params.get("client_name");
+
+    // Optional: Add basic validation
+    if (!client_id || !client_name) {
+      throw new Error("Missing client_id or client_name in URL");
+    }
+
+    // Use the parameters in your API call
+    const response = await fetch(`${BASE_URL}/start_chat?client_id=${client_id}&client_name=${client_name}`);
+        if (!response.ok) throw new Error("Failed to initialize chat");
+        const result = await response.json();
+        localStorage.setItem("customerData", JSON.stringify(result.data));
+        localStorage.setItem("sessionId", result.session_id);
+      } catch (error) {
+        console.error("Error initializing chat:", error);
+      }
+    }
+
+    function getCustomerData() {
+      const data = localStorage.getItem("customerData");
+      const parsed = data ? JSON.parse(data) : null;
+      return Array.isArray(parsed) ? parsed[0] : parsed;
+    }
+
+    // 🔄 ICON TOGGLE ADDED
+function toggleSendButton(isDisabled, icon = "➤") {
+  const sendBtn = document.getElementById("send-btn");
+  sendBtn.disabled = isDisabled;
+
+  if (icon === "⬛") {
+    sendBtn.innerHTML = `<div style="width: 14px; height: 14px; background: black; border-radius: 3px; opacity: 1;"></div>`;
+  } else {
+    sendBtn.innerHTML = icon;
+  }
+}
+
+    function showLoader(isInitial = false) {
+  isTyping = true; // ❗Set typing state
+  const chatBody = document.getElementById("chat-body");
+  const loader = document.createElement("div");
+  loader.className = "loader";
+  loader.id = "typing-loader";
+  loader.innerHTML = `
+    <span>${isInitial ? "Ava is getting ready to assist you..." : "Ava is typing..."}</span>
+    <div class="dots">
+      <span></span><span></span><span></span>
+    </div>
+  `;
+  chatBody.appendChild(loader);
+  chatBody.scrollTop = chatBody.scrollHeight;
+  toggleSendButton(true, "⬛");
+}
+
+function removeLoader() {
+  isTyping = false; // ❗Reset typing state
+  const loader = document.getElementById("typing-loader");
+  if (loader) loader.remove();
+  toggleSendButton(false, "➤");
+}
+
+    async function streamChatMessage(userMessage, isInitial = false) {
+      const chatBody = document.getElementById("chat-body");
+      const customerData = getCustomerData();
+      if (!customerData) return;
+
+      if (!isInitial && userMessage.trim() !== "") {
+        const userDiv = document.createElement("div");
+        userDiv.className = "chat-message user-message";
+        userDiv.innerHTML = userMessage.replace(/\n/g, "<br>");
+        chatBody.appendChild(userDiv);
+        chatBody.scrollTop = chatBody.scrollHeight;
+      }
+
+      showLoader(isInitial);
+      let fullResponse = "";
+
+      try {
+        const sessionId = localStorage.getItem("sessionId");
+        const response = await fetch(`${BASE_URL}/chat/stream`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            session_id: sessionId,
+            message: userMessage,
+            customer_data: customerData
+          })
+        });
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n\n");
+          buffer = lines.pop();
+
+          for (const line of lines) {
+            if (line.startsWith("data:")) {
+              const jsonData = JSON.parse(line.slice(5));
+              if (jsonData.response) {
+                fullResponse = jsonData.response;
+              }
+            }
+          }
+        }
+
+        removeLoader();
+
+        const botDiv = document.createElement("div");
+        botDiv.className = "chat-message bot-message";
+        botDiv.innerHTML = (fullResponse || "It looks like you've been inactive for a while. If you need further help, please start a new session. Also, make sure you have provided the client details in your URL, such as the client's name and ID.").replace(/\n/g, "<br>");
+        chatBody.appendChild(botDiv);
+        chatBody.scrollTop = chatBody.scrollHeight;
+
+      } catch (error) {
+        removeLoader();
+        const botDiv = document.createElement("div");
+        botDiv.className = "chat-message bot-message";
+        botDiv.textContent = "We're currently having trouble fetching the response. Our team is looking into it. Please try again shortly.";
+        chatBody.appendChild(botDiv);
+        console.error("Stream error:", error);
+      }
+    }
+
+function handleKeyPress(event) {
+  if (event.key === "Enter" && !event.shiftKey) {
+    event.preventDefault();
+    if (isTyping) return; // ❗Prevent submission
+    const input = document.getElementById("chat-input");
+    const message = input.value.trim();
+    if (message) {
+      streamChatMessage(message);
+      input.value = "";
+    }
+  }
+}
+
+
+    async function sendMessage() {
+    if (isTyping) return; // ❗Prevent sending while typing
+    const input = document.getElementById("chat-input");
+    const message = input.value.trim();
+    if (message) {
+      input.value = "";
+      await streamChatMessage(message);
+    }
+  }
+
+
+    window.addEventListener("unload", async () => {
+      const customerData = getCustomerData();
+      if (!customerData) return;
+      try {
+      navigator.sendBeacon(
+        `${BASE_URL}/end_chat`,
+          new Blob([JSON.stringify({ session_id: localStorage.getItem("sessionId") })], { type: "application/json" })
+        );
+        console.log("📨 End chat triggered.");
+      } catch (error) {
+        console.error("❌ Failed to send end chat:", error);
+      }
+    });
+  </script>
+</body>
+</html>
