@@ -169,18 +169,7 @@
       0%, 100% { transform: translateY(0); }
       50% { transform: translateY(-6px); }
     }
-    #sentiment-chart-container {
-      width: 200px;
-      height: 200px;
-      margin: 0 auto;
-    }
-    #sentiment-chart-container canvas {
-      width: 100% !important;
-      height: 100% !important;
-    }
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/sentiment@5.0.2/dist/sentiment.min.js"></script>
 </head>
 <body>
   <div class="chatbot-header" id="chat-header">
@@ -190,7 +179,6 @@
   </div>
 
   <div class="chat-body" id="chat-body"></div>
-  <div id="sentiment-chart-container"><canvas id="sentimentChart"></canvas></div>
   <div class="chat-footer">
     <div class="input-wrapper">
       <textarea id="chat-input" placeholder="Type your response..." onkeypress="handleKeyPress(event)"></textarea>
@@ -201,39 +189,6 @@
   <script>
 
 const BASE_URL = "https://codex_chatgpt.clariontechnologies.co.in:8528";
-const sentiment = new Sentiment();
-let sentimentCounts = { positive: 0, negative: 0, neutral: 0 };
-let sentimentChart;
-function initSentimentChart() {
-  const ctx = document.getElementById("sentimentChart").getContext("2d");
-  sentimentChart = new Chart(ctx, {
-    type: "pie",
-    data: {
-      labels: ["Positive", "Negative", "Neutral"],
-      datasets: [{
-        data: [0, 0, 0],
-        backgroundColor: ["#57A773", "#E4572E", "#CFCFCF"]
-      }]
-    },
-    options: { responsive: true }
-  });
-}
-function updateSentimentChart() {
-  sentimentChart.data.datasets[0].data = [
-    sentimentCounts.positive,
-    sentimentCounts.negative,
-    sentimentCounts.neutral
-  ];
-  sentimentChart.update();
-}
-function analyzeSentiment(text) {
-  const score = sentiment.analyze(text).score;
-  if (score > 0) sentimentCounts.positive++;
-  else if (score < 0) sentimentCounts.negative++;
-  else sentimentCounts.neutral++;
-  updateSentimentChart();
-}
-
 
     let isTyping = false;
 
@@ -246,7 +201,6 @@ function analyzeSentiment(text) {
 
     window.onload = async () => {
       await initializeChat();
-      initSentimentChart();
       await streamChatMessage("", true);
       updateClock();
       setInterval(updateClock, 1000);
@@ -345,7 +299,6 @@ function removeLoader() {
         userDiv.className = "chat-message user-message";
         userDiv.innerHTML = userMessage.replace(/\n/g, "<br>");
         chatBody.appendChild(userDiv);
-        analyzeSentiment(userMessage);
         chatBody.scrollTop = chatBody.scrollHeight;
       }
 
@@ -392,7 +345,6 @@ function removeLoader() {
         botDiv.className = "chat-message bot-message";
         botDiv.innerHTML = (fullResponse || "It looks like you've been inactive for a while. If you need further help, please start a new session. Also, make sure you have provided the client details in your URL, such as the client's name and ID.").replace(/\n/g, "<br>");
         chatBody.appendChild(botDiv);
-        analyzeSentiment(fullResponse);
         chatBody.scrollTop = chatBody.scrollHeight;
 
       } catch (error) {
