@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ava - a virtual assistant from Clarion Technologies</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --primary-color: #ff9700;
+        --bg-color: #f2f2f2;
+        --user-bg: #00b7ff;
+        --bot-bg: #e9f3ff;
+        --text-color: #333;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: 'Inter', sans-serif;
+        margin: 0;
+        background: var(--bg-color);
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        color: var(--text-color);
+      }
+
+      .chatbot-header {
+        background: linear-gradient(90deg, hsla(45, 25%, 97%, 0.46), hsla(0, 0%, 96%, 0.9));
+        color: #333;
+        height: 70px;
+        padding: 0 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+      }
+
+      .chatbot-header .logo {
+        position: absolute;
+        left: 20px;
+        height: 35px;
+      }
+
+      .chat-body {
+        flex: 1;
+        padding: 20px;
+        overflow-y: auto;
+        background: #fff;
+        scroll-behavior: smooth;
+      }
+
+      .chat-message {
+        max-width: 45%;
+        padding: 14px 18px;
+        margin: 10px 0;
+        border-radius: 20px;
+        word-wrap: break-word;
+        clear: both;
+        font-size: 15px;
+        line-height: 1.6;
+      }
+
+      .bot-message {
+        background: #c2e9fb;
+        color: #003b64;
+        float: left;
+      }
+
+      .user-message {
+        background-color: #e9e9e9;
+        color: black;
+        float: right;
+      }
+
+      .chat-footer {
+        display: flex;
+        padding: 14px 18px;
+        border-top: 1px solid #ddd;
+        background: rgba(255, 255, 255, 0.75);
+        backdrop-filter: blur(10px);
+        align-items: center;
+        gap: 12px;
+      }
+
+      .input-wrapper {
+        flex: 1;
+      }
+
+      .chat-footer textarea {
+        width: 100%;
+        padding: 12px 16px;
+        border: 1px solid #ccc;
+        border-radius: 14px;
+        resize: none;
+        min-height: 44px;
+        font-size: 15px;
+      }
+
+      .chat-footer textarea:focus {
+        outline: none;
+        border-color: #ff9700;
+      }
+
+      .send-button {
+        background-color: #999999;
+        color: black;
+        border: none;
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        font-size: 20px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .send-button:disabled {
+        opacity: 0.85;
+        cursor: not-allowed;
+      }
+
+      .loader {
+        display: flex;
+        align-items: center;
+        margin-top: 10px;
+        float: left;
+        clear: both;
+        padding: 10px 16px;
+        background-color: var(--bot-bg);
+        border-radius: 15px;
+      }
+
+      .loader span {
+        font-size: 14px;
+        font-style: italic;
+        color: #003b64;
+        margin-right: 10px;
+      }
+
+      .loader .dots span {
+        display: inline-block;
+        width: 6px;
+        height: 6px;
+        margin-right: 4px;
+        background-color: #003b64;
+        border-radius: 50%;
+        animation: zigzag 1s infinite;
+      }
+
+      .loader .dots span:nth-child(2) {
+        animation-delay: 0.2s;
+      }
+
+      .loader .dots span:nth-child(3) {
+        animation-delay: 0.4s;
+      }
+
+      @keyframes zigzag {
+        0%,
+        100% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(-6px);
+        }
+      }
+
+      .feedback-section {
+        background: #fff;
+        padding: 20px;
+      }
+
+      .filter-container {
+        text-align: right;
+        margin-bottom: 10px;
+      }
+
+      .loading,
+      .empty {
+        text-align: center;
+        color: #555;
+        padding: 40px 0;
+      }
+
+      canvas {
+        width: 100% !important;
+        height: 100% !important;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="chatbot-header" id="chat-header">
+      <img src="clarion_logo_bg.svg" alt="Clarion Logo" class="logo" />
+    </div>
+
+    <div id="feedback-section" class="feedback-section"></div>
+    <div class="chat-body" id="chat-body"></div>
+
+    <!-- Commented out chat footer form -->
+    <!--
+    <div class="chat-footer">
+      <div class="input-wrapper">
+        <textarea id="chat-input" placeholder="Type your response..." onkeypress="handleKeyPress(event)"></textarea>
+      </div>
+      <button onclick="sendMessage()" id="send-btn" class="send-button" title="Send">➤</button>
+    </div>
+    -->
+
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+      const { useState, useEffect, useRef } = React;
+      const BASE_URL = "http://127.0.0.1:8000";
+
+      function FeedbackApp() {
+        const [range, setRange] = useState("7");
+        const [filtered, setFiltered] = useState([]);
+        const chartRef = useRef(null);
+        const chartInstance = useRef(null);
+
+        useEffect(() => {
+          async function fetchData() {
+            try {
+              const resp = await fetch(`${BASE_URL}/filtered-feedbacks?days=${range}`);
+              if (!resp.ok) throw new Error("Failed to fetch");
+              const data = await resp.json();
+              setFiltered(data);
+            } catch (err) {
+              console.error("Error fetching feedback:", err);
+              setFiltered([]);
+            }
+          }
+          fetchData();
+        }, [range]);
+
+useEffect(() => {
+  if (!chartRef.current) return;
+
+  if (chartInstance.current) {
+    chartInstance.current.destroy();
+  }
+
+  const sentimentCategories = ['Positive', 'Neutral', 'Challenging'];
+  const counts = { Positive: 0, Neutral: 0, Challenging: 0 };
+  const namesMap = { Positive: [], Neutral: [], Challenging: [] };
+
+  filtered.forEach((r) => {
+    const sentiment = r.sentiment;
+    const name = r.client_name || "Unnamed";// fallback if client name missing
+    counts[sentiment] = (counts[sentiment] || 0) + 1;
+    namesMap[sentiment].push(name);
+  });
+
+  const dataCounts = Object.values(counts);
+  const total = dataCounts.reduce((a, b) => a + b, 0);
+
+  const ctx = chartRef.current.getContext("2d");
+  chartInstance.current = new Chart(ctx, {
+    type: "pie",
+    data: {
+      labels: sentimentCategories,
+      datasets: [
+        {
+          data: dataCounts,
+          backgroundColor: ["#82ca9d", "#8884d8", "#ff8042"],
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: {
+          position: "bottom",
+        },
+tooltip: {
+  callbacks: {
+    label: (tooltipItem) => {
+      const label = tooltipItem.label;
+      const value = tooltipItem.raw;
+      const percentage = total ? ((value / total) * 100).toFixed(1) : 0;
+      const names = namesMap[label].join(", ");
+
+      // Split client names into multiple lines if needed
+      const nameLines = namesMap[label].map(name => `• ${name}`);
+
+      return [
+        `${label}: ${value} (${percentage}%)`,
+        "Clients:",
+        ...nameLines
+      ];
+    }
+  }
+}
+      },
+    },
+  });
+}, [filtered]);
+
+
+        return React.createElement(
+          "div",
+          null,
+          React.createElement(
+            "div",
+            { className: "filter-container" },
+            React.createElement(
+              "select",
+              { value: range, onChange: (e) => setRange(e.target.value) },
+              React.createElement("option", { value: "7" }, "Last 7 days"),
+              React.createElement("option", { value: "30" }, "1 month"),
+              React.createElement("option", { value: "90" }, "3 months"),
+              React.createElement("option", { value: "180" }, "6 months")
+            )
+          ),
+          filtered.length === 0
+            ? React.createElement("div", { className: "empty" }, "No feedback data available.")
+            : React.createElement(
+                "div",
+                { style: { width: "300px", height: "300px" } },
+                React.createElement("canvas", { ref: chartRef })
+              )
+        );
+      }
+
+      ReactDOM.createRoot(document.getElementById("feedback-section")).render(
+        React.createElement(FeedbackApp)
+      );
+    </script>
+  </body>
+</html>

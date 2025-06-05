@@ -246,41 +246,53 @@
       setFiltered(data);
     }
 
-useEffect(() => {
-  if (!chartRef.current) return;
+  useEffect(() => {
+    if (!chartRef.current) return;
 
-  if (chartInstance.current) {
-    chartInstance.current.destroy();
-  }
+    if (chartInstance.current) {
+      chartInstance.current.destroy();
+    }
 
-  const counts = { Positive: 0, Neutral: 0, Challenging: 0 };
-  filtered.forEach(r => { counts[r.sentiment] = (counts[r.sentiment] || 0) + 1; });
+     const counts = { Positive: 0, Neutral: 0, Challenging: 0 };
+    const namesMap = { Positive: [], Neutral: [], Challenging: [] };
+    filtered.forEach(r => {
+      counts[r.sentiment] = (counts[r.sentiment] || 0) + 1;
+      namesMap[r.sentiment].push(r.name);
+    });
 
-  const ctx = chartRef.current.getContext('2d');
-  chartInstance.current = new Chart(ctx, {
-    type: 'pie',
-    data: {
-      labels: Object.keys(counts),
-      datasets: [{
-        data: Object.values(counts),
-        backgroundColor: ['#82ca9d', '#8884d8', '#ff8042']
-      }]
-    },
-    options: {
-      responsive: true,
-      plugins: {
-        legend: {
-          position: 'bottom'
-        },
-        tooltip: {
-          callbacks: {
-            label: (ctx) => `${ctx.label}: ${ctx.raw}`
+    const total = filtered.length;
+
+    const ctx = chartRef.current.getContext('2d');
+    chartInstance.current = new Chart(ctx, {
+      type: 'pie',
+      data: {
+        labels: Object.keys(counts),
+        datasets: [{
+          data: Object.values(counts),
+          backgroundColor: ['#82ca9d', '#8884d8', '#ff8042']
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: {
+            position: 'bottom'
+          },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => {
+                const label = ctx.label;
+                const value = ctx.raw;
+                const percentage = total ? ((value / total) * 100).toFixed(1) : 0;
+                const names = namesMap[label].join(', ');
+                return `${label}: ${value} (${percentage}%)\n${names}`;
+              }
+            }
           }
         }
       }
-    }
-  });
-}, [filtered]);
+    });
+  }, [filtered]);
 
 
     return (
@@ -295,7 +307,7 @@ useEffect(() => {
         ),
         filtered.length === 0 ?
           React.createElement('div', null, 'No feedback data available.') :
-          React.createElement('div', { style: { width: '200px', height: '200px' } },
+          React.createElement('div', { style: { width: '300px', height: '300px' } },
             React.createElement('canvas', { ref: chartRef })
         )
       )
