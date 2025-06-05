@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Ava - a virtual assistant from Clarion Technologies</title>
+  <title>Ava - Virtual Agent</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -42,6 +42,19 @@
       position: absolute;
       left: 20px;
       height: 35px;
+    }
+
+    .chatbot-header .header-title {
+      font-size: 20px;
+      margin: 0;
+      font-weight: 600;
+    }
+
+    .chatbot-header .clock {
+      position: absolute;
+      right: 20px;
+      font-size: 14px;
+      font-weight: 600;
     }
 
     .chat-body {
@@ -161,6 +174,8 @@
 <body>
   <div class="chatbot-header" id="chat-header">
     <img src="clarion_logo_bg.svg" alt="Clarion Logo" class="logo" />
+    <h1 class="header-title">Ava - Virtual Assistant</h1>
+    <div id="clock" class="clock"></div>
   </div>
 
   <div class="chat-body" id="chat-body"></div>
@@ -175,12 +190,20 @@
 
 const BASE_URL = "https://codex_chatgpt.clariontechnologies.co.in:8528";
 
-
     let isTyping = false;
+
+    function updateClock() {
+      const clockEl = document.getElementById("clock");
+      if (!clockEl) return;
+      const now = new Date();
+      clockEl.textContent = now.toLocaleString();
+    }
 
     window.onload = async () => {
       await initializeChat();
       await streamChatMessage("", true);
+      updateClock();
+      setInterval(updateClock, 1000);
     };
 
     // async function initializeChat() {
