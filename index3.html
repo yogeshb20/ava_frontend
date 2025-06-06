@@ -34,7 +34,7 @@
       .chatbot-header {
         background: linear-gradient(90deg, hsla(45, 25%, 97%, 0.46), hsla(0, 0%, 96%, 0.9));
         color: #333;
-        height: 70px;
+        height: 60px;
         padding: 0 20px;
         display: flex;
         align-items: center;
@@ -49,21 +49,20 @@
         height: 35px;
       }
 
-      .chat-body {
+      /* .chat-body {
         flex: 1;
         padding: 20px;
         overflow-y: auto;
         background: #fff;
         scroll-behavior: smooth;
-      }
+      } */
 
-      .chat-message {
-        max-width: 45%;
+      /* .chat-message {
+        max-width: 75vw;
         padding: 14px 18px;
         margin: 10px 0;
         border-radius: 20px;
         word-wrap: break-word;
-        clear: both;
         font-size: 15px;
         line-height: 1.6;
       }
@@ -78,9 +77,9 @@
         background-color: #e9e9e9;
         color: black;
         float: right;
-      }
+      } */
 
-      .chat-footer {
+      /* .chat-footer {
         display: flex;
         padding: 14px 18px;
         border-top: 1px solid #ddd;
@@ -100,32 +99,13 @@
         border: 1px solid #ccc;
         border-radius: 14px;
         resize: none;
-        min-height: 44px;
+        min-height: 20px;
         font-size: 15px;
       }
 
       .chat-footer textarea:focus {
         outline: none;
-        border-color: #ff9700;
-      }
-
-      .send-button {
-        background-color: #999999;
-        color: black;
-        border: none;
-        width: 48px;
-        height: 48px;
-        border-radius: 50%;
-        font-size: 20px;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-
-      .send-button:disabled {
-        opacity: 0.85;
-        cursor: not-allowed;
+        border-color: var(--primary-color);
       }
 
       .loader {
@@ -165,18 +145,41 @@
       }
 
       @keyframes zigzag {
-        0%,
-        100% {
+        0%, 100% {
           transform: translateY(0);
         }
         50% {
           transform: translateY(-6px);
         }
-      }
+      } */
 
-      .feedback-section {
+      .feedback-section,
+      .admin-section {
         background: #fff;
         padding: 20px;
+        margin-top: 20px;
+      }
+
+      .feedback-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      .feedback-table th,
+      .feedback-table td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
+      }
+
+      .feedback-table th {
+        background-color: #f9f9f9;
+      }
+
+      .filter-row input,
+      .filter-row select {
+        width: 100%;
+        padding: 4px;
       }
 
       .filter-container {
@@ -190,30 +193,17 @@
         color: #555;
         padding: 40px 0;
       }
-
-      canvas {
-        width: 100% !important;
-        height: 100% !important;
-      }
     </style>
   </head>
+
   <body>
     <div class="chatbot-header" id="chat-header">
       <img src="clarion_logo_bg.svg" alt="Clarion Logo" class="logo" />
     </div>
 
     <div id="feedback-section" class="feedback-section"></div>
+    <div id="team-feedback-section" class="admin-section"></div>
     <div class="chat-body" id="chat-body"></div>
-
-    <!-- Commented out chat footer form -->
-    <!--
-    <div class="chat-footer">
-      <div class="input-wrapper">
-        <textarea id="chat-input" placeholder="Type your response..." onkeypress="handleKeyPress(event)"></textarea>
-      </div>
-      <button onclick="sendMessage()" id="send-btn" class="send-button" title="Send">➤</button>
-    </div>
-    -->
 
     <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
@@ -244,69 +234,64 @@
           fetchData();
         }, [range]);
 
-useEffect(() => {
-  if (!chartRef.current) return;
+        useEffect(() => {
+          if (!chartRef.current) return;
 
-  if (chartInstance.current) {
-    chartInstance.current.destroy();
-  }
+          if (chartInstance.current) {
+            chartInstance.current.destroy();
+          }
 
-  const sentimentCategories = ['Positive', 'Neutral', 'Challenging'];
-  const counts = { Positive: 0, Neutral: 0, Challenging: 0 };
-  const namesMap = { Positive: [], Neutral: [], Challenging: [] };
+          const sentimentCategories = ['Positive', 'Neutral', 'Challenging'];
+          const counts = { Positive: 0, Neutral: 0, Challenging: 0 };
+          const namesMap = { Positive: [], Neutral: [], Challenging: [] };
 
-  filtered.forEach((r) => {
-    const sentiment = r.sentiment;
-    const name = r.client_name || "Unnamed";// fallback if client name missing
-    counts[sentiment] = (counts[sentiment] || 0) + 1;
-    namesMap[sentiment].push(name);
-  });
+          filtered.forEach((r) => {
+            const sentiment = r.sentiment;
+            const name = r.client_name || "Unnamed";
+            counts[sentiment] = (counts[sentiment] || 0) + 1;
+            namesMap[sentiment].push(name);
+          });
 
-  const dataCounts = Object.values(counts);
-  const total = dataCounts.reduce((a, b) => a + b, 0);
+          const dataCounts = Object.values(counts);
+          const total = dataCounts.reduce((a, b) => a + b, 0);
 
-  const ctx = chartRef.current.getContext("2d");
-  chartInstance.current = new Chart(ctx, {
-    type: "pie",
-    data: {
-      labels: sentimentCategories,
-      datasets: [
-        {
-          data: dataCounts,
-          backgroundColor: ["#82ca9d", "#8884d8", "#ff8042"],
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      plugins: {
-        legend: {
-          position: "bottom",
-        },
-tooltip: {
-  callbacks: {
-    label: (tooltipItem) => {
-      const label = tooltipItem.label;
-      const value = tooltipItem.raw;
-      const percentage = total ? ((value / total) * 100).toFixed(1) : 0;
-      const names = namesMap[label].join(", ");
-
-      // Split client names into multiple lines if needed
-      const nameLines = namesMap[label].map(name => `• ${name}`);
-
-      return [
-        `${label}: ${value} (${percentage}%)`,
-        "Clients:",
-        ...nameLines
-      ];
-    }
-  }
-}
-      },
-    },
-  });
-}, [filtered]);
-
+          const ctx = chartRef.current.getContext("2d");
+          chartInstance.current = new Chart(ctx, {
+            type: "pie",
+            data: {
+              labels: sentimentCategories,
+              datasets: [
+                {
+                  data: dataCounts,
+                  backgroundColor: ["#82ca9d", "#8884d8", "#ff8042"],
+                },
+              ],
+            },
+            options: {
+              responsive: true,
+              plugins: {
+                legend: {
+                  position: "bottom",
+                },
+                tooltip: {
+                  callbacks: {
+                    label: (tooltipItem) => {
+                      const label = tooltipItem.label;
+                      const value = tooltipItem.raw;
+                      const percentage = total ? ((value / total) * 100).toFixed(1) : 0;
+                      const nameLines = namesMap[label].map(name => `• ${name}`);
+                      return [
+                        `${label}: ${value} (${percentage}%)`,
+                        "Clients:",
+                        ...nameLines
+                      ];
+                    },
+                  },
+                },
+              },
+            },
+          });
+        }, [filtered]);
 
         return React.createElement(
           "div",
@@ -333,8 +318,100 @@ tooltip: {
         );
       }
 
+      function TeamFeedbackApp() {
+        const [rows, setRows] = useState([]);
+        const [clientFilter, setClientFilter] = useState("");
+        const [ratingFilter, setRatingFilter] = useState("");
+
+        useEffect(() => {
+          async function fetchData() {
+            try {
+              const resp = await fetch(`${BASE_URL}/team-feedbacks`);
+              if (!resp.ok) throw new Error("Failed to fetch");
+              const data = await resp.json();
+              setRows(data);
+            } catch (err) {
+              console.error("Error fetching team feedback:", err);
+              setRows([]);
+            }
+          }
+          fetchData();
+        }, []);
+
+        return React.createElement(
+          "div",
+          null,
+          rows.length === 0
+            ? React.createElement("div", { className: "empty" }, "No team feedback data.")
+            : React.createElement(
+                "table",
+                { className: "feedback-table" },
+                React.createElement(
+                  "thead",
+                  null,
+                  React.createElement(
+                    "tr",
+                    null,
+                    ["Client Name", "Project Name", "Employee Name", "Rating", "Strengths", "Areas for Improvement"].map(h =>
+                      React.createElement("th", null, h)
+                    )
+                  ),
+                  React.createElement(
+                    "tr",
+                    { className: "filter-row" },
+                    React.createElement("th", null,
+                      React.createElement("input", {
+                        value: clientFilter,
+                        onChange: (e) => setClientFilter(e.target.value),
+                        placeholder: "Filter"
+                      })
+                    ),
+                    React.createElement("th", null),
+                    React.createElement("th", null),
+                    React.createElement("th", null,
+                      React.createElement("select", {
+                        value: ratingFilter,
+                        onChange: (e) => setRatingFilter(e.target.value)
+                      },
+                        React.createElement("option", { value: "" }, "All"),
+                        [1, 2, 3, 4, 5].map(n =>
+                          React.createElement("option", { key: n, value: n }, n)
+                        )
+                      )
+                    ),
+                    React.createElement("th", null),
+                    React.createElement("th", null)
+                  )
+                ),
+                React.createElement(
+                  "tbody",
+                  null,
+                  rows
+                    .filter(row =>
+                      (clientFilter === "" || (row.client_name || "").toLowerCase().includes(clientFilter.toLowerCase())) &&
+                      (ratingFilter === "" || String(row.rating || "") === String(ratingFilter))
+                    )
+                    .map((r, i) =>
+                      React.createElement("tr", { key: i },
+                        React.createElement("td", null, r.client_name || "Unnamed"),
+                        React.createElement("td", null, r.project_name || ""),
+                        React.createElement("td", null, r.employee_name || ""),
+                        React.createElement("td", null, r.rating || ""),
+                        React.createElement("td", null, r.strengths || ""),
+                        React.createElement("td", null, r.areas_for_improvement || "")
+                      )
+                    )
+                )
+              )
+        );
+      }
+
       ReactDOM.createRoot(document.getElementById("feedback-section")).render(
         React.createElement(FeedbackApp)
+      );
+
+      ReactDOM.createRoot(document.getElementById("team-feedback-section")).render(
+        React.createElement(TeamFeedbackApp)
       );
     </script>
   </body>
