@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin Dashboard - Customer Sentiment</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --primary-color: #ff9700;
+      --bg-color: #f2f2f2;
+      --text-color: #333;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Inter', sans-serif;
+      margin: 0;
+      background: var(--bg-color);
+      color: var(--text-color);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    .chatbot-header {
+      background: linear-gradient(90deg, hsla(45,25%,97%,.46), hsla(0,0%,96%,.9));
+      color: #333;
+      height: 70px;
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+    .chatbot-header .logo {
+      position: absolute;
+      left: 20px;
+      height: 35px;
+    }
+    .filter-container {
+      position: absolute;
+      right: 20px;
+    }
+    .chart-wrapper {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .chart-box {
+      width: 100%;
+      max-width: 400px;
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+  </style>
+</head>
+<body>
+  <div class="chatbot-header" id="chat-header">
+    <img src="../clarion_logo_bg.svg" alt="Clarion Logo" class="logo" />
+    <div class="filter-container">
+      <select id="durationSelect">
+        <option value="7">Last 7 days</option>
+        <option value="30">Last 30 days</option>
+        <option value="90">Last 90 days</option>
+        <option value="180">Last 180 days</option>
+      </select>
+    </div>
+  </div>
+  <div class="chart-wrapper">
+    <div class="chart-box">
+      <canvas id="sentimentChart"></canvas>
+    </div>
+  </div>
+<script>
+(function(){
+  const sentiments = ['Positive','Neutral','Challenging'];
+  const names = ['Alice','Bob','Charlie','Dana','Evan','Fiona','George','Hannah','Ian','Jack','Kate','Liam','Mia','Noah','Olivia','Paula','Quentin','Rose','Sam','Tina'];
+
+  function randomDateWithin(days){
+    const d = new Date();
+    d.setDate(d.getDate() - Math.floor(Math.random()*days));
+    return d;
+  }
+
+  const records = Array.from({length:20}).map((_,i)=>({
+    id: i+1,
+    date: randomDateWithin(180),
+    customerName: names[i],
+    sentiment: sentiments[Math.floor(Math.random()*sentiments.length)],
+    summary: `Feedback ${i+1}`
+  }));
+
+  const ctx = document.getElementById('sentimentChart').getContext('2d');
+  const chart = new Chart(ctx, {
+    type: 'pie',
+    data: {
+      labels: sentiments,
+      datasets: [{
+        data: [0,0,0],
+        backgroundColor: ['#82ca9d','#8884d8','#ff8042']
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { position: 'bottom' } }
+    }
+  });
+
+  function updateChart(){
+    const range = parseInt(document.getElementById('durationSelect').value,10);
+    const now = new Date();
+    const past = new Date();
+    past.setDate(now.getDate() - range);
+    const filtered = records.filter(r => r.date >= past);
+    const counts = {Positive:0, Neutral:0, Challenging:0};
+    filtered.forEach(r=>{ counts[r.sentiment]++; });
+    chart.data.datasets[0].data = sentiments.map(s=>counts[s]);
+    chart.update();
+  }
+
+  document.getElementById('durationSelect').addEventListener('change', updateChart);
+  updateChart();
+})();
+</script>
+</body>
+</html>
