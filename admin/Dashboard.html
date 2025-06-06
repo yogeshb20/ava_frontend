@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --primary-color: #ff9700;
+    }
+    body {
+      margin: 0;
+      font-family: 'Inter', sans-serif;
+      background: #f9f9f9;
+      color: #333;
+    }
+    .chatbot-header {
+      background: linear-gradient(90deg, hsla(45,25%,97%,.46), hsla(0,0%,96%,.9));
+      height: 70px;
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+    .chatbot-header .logo {
+      position: absolute;
+      left: 20px;
+      height: 35px;
+    }
+    .header-right {
+      position: absolute;
+      right: 20px;
+    }
+    main {
+      padding: 20px;
+    }
+    canvas {
+      max-width: 600px;
+      margin: 0 auto;
+      width: 100%;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+    }
+    th {
+      background: #f0f0f0;
+    }
+    @media (max-width: 600px) {
+      .header-right select {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="chatbot-header">
+    <img src="../clarion_logo_bg.svg" alt="Clarion Logo" class="logo">
+    <div class="header-right">
+      <select id="filter-range">
+        <option value="7">Last 7 days</option>
+        <option value="30">Last 30 days</option>
+        <option value="90">Last 90 days</option>
+        <option value="180">Last 180 days</option>
+      </select>
+    </div>
+  </div>
+  <main>
+    <canvas id="sentimentChart"></canvas>
+    <table id="record-table" style="display:none;">
+      <thead>
+        <tr><th>ID</th><th>Customer</th><th>Date</th><th>Summary</th></tr>
+      </thead>
+      <tbody id="record-body"></tbody>
+    </table>
+  </main>
+<script>
+  function randomDate(days) {
+    const d = new Date();
+    d.setDate(d.getDate() - Math.floor(Math.random() * days));
+    return d.toISOString().split('T')[0];
+  }
+  const sentiments = ['Positive','Neutral','Challenging'];
+  const names = ['Alice','Bob','Charlie','Dana','Evan','Fiona','George','Hannah','Ian','Jack','Kate','Liam','Mia','Noah','Olivia','Paul','Quincy','Rachel','Sam','Tina'];
+  const data = Array.from({length:20}, (_,i)=>({
+    id: i + 1,
+    date: randomDate(180),
+    customerName: names[i],
+    sentiment: sentiments[Math.floor(Math.random()*3)],
+    summary: 'Dummy feedback ' + (i + 1)
+  }));
+  let chart;
+
+  function filterData(range) {
+    const now = new Date();
+    return data.filter(r => (now - new Date(r.date))/(1000*60*60*24) <= range);
+  }
+
+  function updateChart() {
+    const range = parseInt(document.getElementById('filter-range').value, 10);
+    const filtered = filterData(range);
+    const counts = { Positive:0, Neutral:0, Challenging:0 };
+    filtered.forEach(r => counts[r.sentiment]++);
+    const ctx = document.getElementById('sentimentChart').getContext('2d');
+    if (chart) chart.destroy();
+    chart = new Chart(ctx, {
+      type: 'pie',
+      data: {
+        labels: Object.keys(counts),
+        datasets: [{
+          data: Object.values(counts),
+          backgroundColor: ['#82ca9d','#8884d8','#ff8042']
+        }]
+      },
+      options: {
+        onClick: (e, els) => {
+          if (els.length) showTable(chart.data.labels[els[0].index]);
+        },
+        plugins: { legend: { position: 'bottom' } },
+        responsive: true
+      }
+    });
+    document.getElementById('record-table').style.display = 'none';
+  }
+
+  function showTable(sentiment) {
+    const range = parseInt(document.getElementById('filter-range').value, 10);
+    const rows = filterData(range).filter(r => r.sentiment === sentiment);
+    const tbody = document.getElementById('record-body');
+    tbody.innerHTML = '';
+    rows.forEach(r => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${r.id}</td><td>${r.customerName}</td><td>${r.date}</td><td>${r.summary}</td>`;
+      tbody.appendChild(tr);
+    });
+    document.getElementById('record-table').style.display = rows.length ? 'table' : 'none';
+  }
+
+  document.getElementById('filter-range').addEventListener('change', updateChart);
+  updateChart();
+</script>
+</body>
+</html>
